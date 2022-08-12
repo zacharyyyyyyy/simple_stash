@@ -1,0 +1,18 @@
+Client:
+   KafKa :
+     Broker :
+       - { Host : "127.0.0.1", Port : "9092", User : "", Pwd : ""}
+     MaxWaitTime : 3
+     Topic :
+        - "log"
+     Group : "log_collector"
+     Consumers : 1
+   ElasticSearch:
+     Username : ""
+     Password : ""
+     Host : ""
+     Port : ""
+     Index : ""
+
+
+
