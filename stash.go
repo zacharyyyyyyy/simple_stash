@@ -8,5 +8,5 @@ import (
 func main() {
 	baseConf := &config.Client{}
 	config.LoadConf(baseConf, "config.yaml")
-	fmt.Println(baseConf.ClientConf.EsConf.Index)
+	fmt.Println(baseConf)
 }

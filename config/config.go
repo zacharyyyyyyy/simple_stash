@@ -18,8 +18,8 @@ type (
 		Broker      []KafKaBroker `yaml:"Broker"`
 		Topic       []string      `yaml:"Topic"`
 		Group       string        `yaml:"Group"`
-		Customers   int           `yaml:"Customers"`
-		MaxWaitTime int
+		Consumers   int           `yaml:"Consumers"`
+		MaxWaitTime int           `yaml:"MaxWaitTime"`
 	}
 	EsConf struct {
 		Username string `yaml:"Username"`
@@ -28,9 +28,15 @@ type (
 		Port     string `yaml:"Port"`
 		Index    string `yaml:"Index"`
 	}
-	ClientDetail struct {
+	ClientInput struct {
 		KafkaConf kafkaConf `yaml:"KafKa"`
-		EsConf    EsConf    `yaml:"ElasticSearch"`
+	}
+	ClientOutput struct {
+		EsConf EsConf `yaml:"ElasticSearch"`
+	}
+	ClientDetail struct {
+		Input  ClientInput  `yaml:"Input"`
+		Output ClientOutput `yaml:"Output"`
 	}
 	Client struct {
 		ClientConf ClientDetail `yaml:"Client"`
@@ -47,5 +53,5 @@ func LoadConf(config *Client, configFileName string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println()
+	fmt.Println(config)
 }
