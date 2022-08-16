@@ -22,11 +22,12 @@ type (
 		MaxWaitTime int           `yaml:"MaxWaitTime"`
 	}
 	EsConf struct {
-		Username string `yaml:"Username"`
-		Password string `yaml:"Password"`
-		Host     string `yaml:"Host"`
-		Port     string `yaml:"Port"`
-		Index    string `yaml:"Index"`
+		Username     string `yaml:"Username"`
+		Password     string `yaml:"Password"`
+		Host         string `yaml:"Host"`
+		Port         string `yaml:"Port"`
+		Index        string `yaml:"Index"`
+		BulkMaxCount int    `yaml:"BulkMaxCount"`
 	}
 	ClientInput struct {
 		KafkaConf kafkaConf `yaml:"KafKa"`

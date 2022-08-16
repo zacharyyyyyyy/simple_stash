@@ -15,6 +15,7 @@ Client:
       Host: "127.0.0.1"
       Port: "9200"
       Index: "log"
+      BulkMaxCount: 5
 
 
 

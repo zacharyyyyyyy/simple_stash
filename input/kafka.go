@@ -44,7 +44,7 @@ func (kafka kafka) new(config config.ClientInput) Input {
 	wg.Wait()
 	return KafkaHandler
 }
-func (kafka kafka) collect(ctx context.Context) error {
+func (kafka kafka) run(ctx context.Context) error {
 	var wg sync.WaitGroup
 	for _, consumer := range KafkaHandler.kafkaGroup {
 		wg.Add(1)
@@ -54,6 +54,7 @@ func (kafka kafka) collect(ctx context.Context) error {
 		}()
 	}
 	wg.Wait()
+	return nil
 }
 
 //kafka组消费

@@ -1,8 +1,8 @@
 package output
 
 import (
-	"context"
 	"simple_stash/config"
+	"simple_stash/logger"
 )
 
 type (
@@ -10,20 +10,39 @@ type (
 		new(config config.ClientOutput) Output
 	}
 	Output interface {
-		write(ctx context.Context, data interface{})
+		run() error
 	}
 )
 
-var OutputerMap = make(map[string]OutputInit)
+var (
+	OutputerMap     = make(map[string]OutputInit)
+	OutputerHandler Output
+	dataChan        = make(chan interface{}, 200)
+)
 
 func NewOutputer(OutputerName string, config config.Client) Output {
 	if outputInit, ok := OutputerMap[OutputerName]; ok {
-		return outputInit.new(config.ClientConf.Output)
+		OutputerHandler = outputInit.new(config.ClientConf.Output)
+		return OutputerHandler
 	}
 	return nil
 }
-func Write(ctx context.Context, outputHandler Output, data interface{}) {
-	outputHandler.write(ctx, data)
+func Write(data interface{}) {
+	dataChan <- data
+}
+
+func Run(output Output) {
+	errChan := make(chan struct{}, 1)
+	go func() {
+		err := output.run()
+		if err != nil {
+			logger.Runtime.Error(err.Error())
+		}
+		errChan <- struct{}{}
+	}()
+	select {
+	case <-errChan:
+	}
 }
 
 func register(name string, outputer OutputInit) {
