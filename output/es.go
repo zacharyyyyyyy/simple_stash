@@ -63,6 +63,7 @@ func (es elasticSearch) run() error {
 			if len(ElasticHandler.dataSlice) >= es.bulkMaxCount {
 				bulkData := ElasticHandler.dataSlice[:es.bulkMaxCount]
 				ElasticHandler.dataSlice = ElasticHandler.dataSlice[es.bulkMaxCount:]
+				_ = sema.Acquire(context.Background(), goroutineWeight)
 				go func(bulkData []interface{}) {
 					es.bulkCreate(bulkData)
 				}(bulkData)
@@ -84,4 +85,5 @@ func (es elasticSearch) bulkCreate(bulkData []interface{}) {
 			logger.Runtime.Error(err.Error())
 		}
 	}
+	sema.Release(goroutineWeight)
 }
