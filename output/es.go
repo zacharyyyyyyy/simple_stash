@@ -21,7 +21,7 @@ type elasticSearch struct {
 	bulkMaxCount int
 }
 
-const esOutput = "es"
+const EsOutputer = "es"
 
 var (
 	ElasticHandler        = &elasticSearch{}
@@ -31,7 +31,7 @@ var (
 )
 
 func init() {
-	register(esOutput, ElasticHandler)
+	register(EsOutputer, ElasticHandler)
 }
 
 func (es elasticSearch) new(config config.ClientOutput) Output {

@@ -15,6 +15,7 @@ type kafka struct {
 	topic      []string
 }
 type consumerGroupHandler struct {
+	consumeFunc func(data string)
 }
 
 const KafkaInputer = "kafka"
@@ -44,13 +45,13 @@ func (kafka kafka) new(config config.ClientInput) Input {
 	wg.Wait()
 	return KafkaHandler
 }
-func (kafka kafka) run(ctx context.Context) error {
+func (kafka kafka) run(ctx context.Context, consumeFunc func(data string)) error {
 	var wg sync.WaitGroup
 	for _, consumer := range KafkaHandler.kafkaGroup {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			ConsumerGroup(consumer, KafkaHandler.topic)
+			ConsumerGroup(consumer, KafkaHandler.topic, consumeFunc)
 		}()
 	}
 	wg.Wait()
@@ -67,15 +68,15 @@ func (consumerGroupHandler) Cleanup(_ sarama.ConsumerGroupSession) error { retur
 // ConsumeClaim 具体的消费逻辑
 func (h consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for msg := range claim.Messages() {
-		//Todo
-
+		//消费信息
+		h.consumeFunc(string(msg.Value))
 		// 标记消息已被消费 内部会更新 consumer offset
 		sess.MarkMessage(msg, "")
 	}
 	return nil
 }
 
-func ConsumerGroup(cg sarama.ConsumerGroup, topic []string) {
+func ConsumerGroup(cg sarama.ConsumerGroup, topic []string, consumeFunc func(data string)) {
 	var err error
 	ctx, _ := context.WithCancel(context.Background())
 	defer cg.Close()
@@ -83,7 +84,7 @@ func ConsumerGroup(cg sarama.ConsumerGroup, topic []string) {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		handler := consumerGroupHandler{}
+		handler := consumerGroupHandler{consumeFunc: consumeFunc}
 		for {
 			err = cg.Consume(ctx, topic, handler)
 			if err != nil {

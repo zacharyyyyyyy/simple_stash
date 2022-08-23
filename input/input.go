@@ -11,7 +11,7 @@ type (
 		new(config config.ClientInput) Input
 	}
 	Input interface {
-		run(ctx context.Context) error
+		run(ctx context.Context, consumeFunc func(data string)) error
 	}
 )
 
@@ -24,10 +24,10 @@ func NewInputer(InputerName string, config config.Client) Input {
 	return nil
 }
 
-func Run(ctx context.Context, intputHandler Input) {
+func Run(ctx context.Context, intputHandler Input, consumeFunc func(data string)) {
 	errChan := make(chan struct{}, 1)
 	go func() {
-		err := intputHandler.run(ctx)
+		err := intputHandler.run(ctx, consumeFunc)
 		if err != nil {
 			logger.Runtime.Error(err.Error())
 		}
