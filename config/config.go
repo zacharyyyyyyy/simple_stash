@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"gopkg.in/yaml.v2"
 	"log"
 	"os"
@@ -54,5 +53,4 @@ func LoadConf(config *Client, configFileName string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(config)
 }

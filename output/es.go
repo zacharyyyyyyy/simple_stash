@@ -14,11 +14,12 @@ import (
 )
 
 type elasticSearch struct {
-	client      *elastic.Client
-	bulkRequest *elastic.BulkService
-	dataSlice   []interface{}
-	*sync.RWMutex
+	client       *elastic.Client
+	bulkRequest  *elastic.BulkService
+	dataSlice    []interface{}
+	lock         sync.RWMutex
 	bulkMaxCount int
+	index        string
 }
 
 const EsOutputer = "es"
@@ -48,18 +49,19 @@ func (es elasticSearch) new(config config.ClientOutput) Output {
 		panic(err)
 	}
 	ElasticHandler.client = client
-	ElasticHandler.dataSlice = make([]interface{}, 20)
+	ElasticHandler.dataSlice = make([]interface{}, 0, 20)
 	ElasticHandler.bulkRequest = client.Bulk()
 	ElasticHandler.bulkMaxCount = config.EsConf.BulkMaxCount
+	ElasticHandler.index = config.EsConf.Index
 	return ElasticHandler
 }
 
-func (es elasticSearch) run() error {
+func (es elasticSearch) run(ctx context.Context) error {
 	for {
 		select {
-		case data := <-dataChan:
+		case data := <-read():
 			ElasticHandler.dataSlice = append(ElasticHandler.dataSlice, data)
-			ElasticHandler.RLock()
+			ElasticHandler.lock.RLock()
 			if len(ElasticHandler.dataSlice) >= es.bulkMaxCount {
 				bulkData := ElasticHandler.dataSlice[:es.bulkMaxCount]
 				ElasticHandler.dataSlice = ElasticHandler.dataSlice[es.bulkMaxCount:]
@@ -68,14 +70,16 @@ func (es elasticSearch) run() error {
 					es.bulkCreate(bulkData)
 				}(bulkData)
 			}
-
+			ElasticHandler.lock.RUnlock()
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 }
 
 func (es elasticSearch) bulkCreate(bulkData []interface{}) {
 	for _, data := range bulkData {
-		req := elastic.NewBulkIndexRequest().Index("info").Type("user").Doc(data)
+		req := elastic.NewBulkIndexRequest().Index(es.index).Type("_doc").Doc(data)
 		es.bulkRequest.Add(req)
 	}
 	if len(bulkData) > 0 {

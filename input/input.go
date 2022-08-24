@@ -2,29 +2,30 @@ package input
 
 import (
 	"context"
+	"log"
 	"simple_stash/config"
 	"simple_stash/logger"
 )
 
 type (
-	InputInit interface {
-		new(config config.ClientInput) Input
-	}
 	Input interface {
-		run(ctx context.Context, consumeFunc func(data string)) error
+		new(config config.ClientInput) Input
+		run(ctx context.Context, consumeFunc func(data interface{})) error
 	}
 )
 
-var InputerMap = make(map[string]InputInit)
+var inputerMap = make(map[string]Input)
 
 func NewInputer(InputerName string, config config.Client) Input {
-	if inputer, ok := InputerMap[InputerName]; ok {
+	if inputer, ok := inputerMap[InputerName]; ok {
 		return inputer.new(config.ClientConf.Input)
+	} else {
+		log.Fatal(InputerName + "not found!")
 	}
 	return nil
 }
 
-func Run(ctx context.Context, intputHandler Input, consumeFunc func(data string)) {
+func Run(ctx context.Context, intputHandler Input, consumeFunc func(data interface{})) {
 	errChan := make(chan struct{}, 1)
 	go func() {
 		err := intputHandler.run(ctx, consumeFunc)
@@ -40,8 +41,8 @@ func Run(ctx context.Context, intputHandler Input, consumeFunc func(data string)
 
 }
 
-func register(name string, inputer InputInit) {
-	if _, ok := InputerMap[name]; !ok {
-		InputerMap[name] = inputer
+func register(name string, inputer Input) {
+	if _, ok := inputerMap[name]; !ok {
+		inputerMap[name] = inputer
 	}
 }

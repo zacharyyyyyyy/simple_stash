@@ -15,43 +15,44 @@ type kafka struct {
 	topic      []string
 }
 type consumerGroupHandler struct {
-	consumeFunc func(data string)
+	consumeFunc func(data interface{})
 }
 
 const KafkaInputer = "kafka"
 
-var KafkaHandler = &kafka{}
+var kafkaHandler = &kafka{}
 
 func init() {
-	register(KafkaInputer, KafkaHandler)
+	register(KafkaInputer, kafkaHandler)
 }
 
 func (kafka kafka) new(config config.ClientInput) Input {
 	kafkaConf := config.KafkaConf
-	KafkaHandler.topic = config.KafkaConf.Topic
+	kafkaHandler.topic = config.KafkaConf.Topic
 	var wg sync.WaitGroup
 	for i := 0; i < config.KafkaConf.Consumers; i++ {
 		wg.Add(1)
-		go func() {
+		go func(k int) {
 			defer wg.Done()
-			consumer, err := newClient(config.KafkaConf.Broker[i], kafkaConf.Group, kafkaConf.MaxWaitTime)
+			consumer, err := newClient(config.KafkaConf.Broker[k], kafkaConf.Group, kafkaConf.MaxWaitTime)
 			if err != nil {
 				logger.Runtime.Error(err.Error())
 				return
 			}
-			KafkaHandler.kafkaGroup = append(KafkaHandler.kafkaGroup, consumer)
-		}()
+
+			kafkaHandler.kafkaGroup = append(kafkaHandler.kafkaGroup, consumer)
+		}(i)
 	}
 	wg.Wait()
-	return KafkaHandler
+	return kafkaHandler
 }
-func (kafka kafka) run(ctx context.Context, consumeFunc func(data string)) error {
+func (kafka kafka) run(ctx context.Context, consumeFunc func(data interface{})) error {
 	var wg sync.WaitGroup
-	for _, consumer := range KafkaHandler.kafkaGroup {
+	for _, consumer := range kafkaHandler.kafkaGroup {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			ConsumerGroup(consumer, KafkaHandler.topic, consumeFunc)
+			consumerGroup(ctx, consumer, kafkaHandler.topic, consumeFunc)
 		}()
 	}
 	wg.Wait()
@@ -76,9 +77,8 @@ func (h consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, cla
 	return nil
 }
 
-func ConsumerGroup(cg sarama.ConsumerGroup, topic []string, consumeFunc func(data string)) {
+func consumerGroup(ctx context.Context, cg sarama.ConsumerGroup, topic []string, consumeFunc func(data interface{})) {
 	var err error
-	ctx, _ := context.WithCancel(context.Background())
 	defer cg.Close()
 	var wg sync.WaitGroup
 	wg.Add(1)
@@ -104,6 +104,6 @@ func newClient(configBase config.KafKaBroker, group string, maxWaitTime int) (sa
 	saramaConfig.Net.SASL.Password = configBase.Pwd
 	saramaConfig.Net.SASL.User = configBase.User
 	saramaConfig.Consumer.MaxWaitTime = time.Duration(maxWaitTime) * time.Second
-	return sarama.NewConsumerGroup([]string{fmt.Sprintf("%s,%s", configBase.Host, configBase.Port)}, group, saramaConfig)
+	return sarama.NewConsumerGroup([]string{fmt.Sprintf("%s:%s", configBase.Host, configBase.Port)}, group, saramaConfig)
 
 }

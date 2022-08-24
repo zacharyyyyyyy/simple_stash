@@ -12,7 +12,7 @@ Client:
     ElasticSearch:
       Username: ""
       Password: ""
-      Host: "127.0.0.1"
+      Host: "http://127.0.0.1"
       Port: "9200"
       Index: "log"
       BulkMaxCount: 5
