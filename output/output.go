@@ -16,7 +16,8 @@ type (
 var (
 	OutputerMap     = make(map[string]Output)
 	OutputerHandler Output
-	dataChan        = make(chan interface{}, 200)
+	//通过channel 将采集端数据传递给输出端
+	dataChan = make(chan interface{}, 200)
 )
 
 func NewOutputer(OutputerName string, config config.Client) Output {
