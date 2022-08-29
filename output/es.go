@@ -4,20 +4,18 @@ import (
 	"context"
 	"fmt"
 	"golang.org/x/sync/semaphore"
-	"sync"
-	"time"
-
-	"github.com/olivere/elastic/v7"
 	"log"
 	"simple_stash/config"
 	"simple_stash/logger"
+	"time"
+
+	"github.com/olivere/elastic/v7"
 )
 
 type elasticSearch struct {
 	client       *elastic.Client
 	bulkRequest  *elastic.BulkService
 	dataSlice    []interface{}
-	lock         sync.RWMutex
 	bulkMaxCount int
 	index        string
 }
@@ -57,37 +55,44 @@ func (es elasticSearch) new(config config.ClientOutput) Output {
 }
 
 func (es elasticSearch) run(ctx context.Context) error {
+	defer es.client.Stop()
 	for {
 		select {
 		case data := <-read():
 			ElasticHandler.dataSlice = append(ElasticHandler.dataSlice, data)
-			ElasticHandler.lock.RLock()
+			if ctx.Err() != nil {
+				es.bulkCreate(ElasticHandler.dataSlice)
+				logger.Runtime.Info("elasticsearch client close!")
+				return nil
+			}
 			if len(ElasticHandler.dataSlice) >= es.bulkMaxCount {
 				bulkData := ElasticHandler.dataSlice[:es.bulkMaxCount]
 				ElasticHandler.dataSlice = ElasticHandler.dataSlice[es.bulkMaxCount:]
 				_ = sema.Acquire(context.Background(), goroutineWeight)
 				go func(bulkData []interface{}) {
 					es.bulkCreate(bulkData)
+					sema.Release(goroutineWeight)
 				}(bulkData)
 			}
-			ElasticHandler.lock.RUnlock()
 		case <-ctx.Done():
-			return ctx.Err()
+			//清空剩余data
+			es.bulkCreate(ElasticHandler.dataSlice)
+			logger.Runtime.Info("elasticsearch client close!")
+			return nil
 		}
 	}
 }
 
 func (es elasticSearch) bulkCreate(bulkData []interface{}) {
-	for _, data := range bulkData {
-		req := elastic.NewBulkIndexRequest().Index(es.index).Type("_doc").Doc(data)
-		es.bulkRequest.Add(req)
-	}
 	if len(bulkData) > 0 {
+		for _, data := range bulkData {
+			req := elastic.NewBulkIndexRequest().Index(es.index).Type("_doc").Doc(data)
+			es.bulkRequest.Add(req)
+		}
 		ctx, _ := context.WithTimeout(context.Background(), 5*time.Second)
 		_, err := es.bulkRequest.Do(ctx)
 		if err != nil {
 			logger.Runtime.Error(err.Error())
 		}
 	}
-	sema.Release(goroutineWeight)
 }

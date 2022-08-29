@@ -14,7 +14,9 @@ type (
 	}
 )
 
-var inputerMap = make(map[string]Input)
+var (
+	inputerMap = make(map[string]Input)
+)
 
 func NewInputer(InputerName string, config config.Client) Input {
 	if inputer, ok := inputerMap[InputerName]; ok {
@@ -26,19 +28,17 @@ func NewInputer(InputerName string, config config.Client) Input {
 }
 
 func Run(ctx context.Context, intputHandler Input, consumeFunc func(data interface{})) {
-	errChan := make(chan struct{}, 1)
+	var rChan = make(chan struct{}, 1)
 	go func() {
 		err := intputHandler.run(ctx, consumeFunc)
 		if err != nil {
 			logger.Runtime.Error(err.Error())
 		}
-		errChan <- struct{}{}
+		rChan <- struct{}{}
 	}()
 	select {
-	case <-ctx.Done():
-	case <-errChan:
+	case <-rChan:
 	}
-
 }
 
 func register(name string, inputer Input) {

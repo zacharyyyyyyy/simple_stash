@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"os"
 	"os/signal"
@@ -10,7 +9,6 @@ import (
 	"simple_stash/input"
 	"simple_stash/output"
 	"syscall"
-	"time"
 )
 
 func main() {
@@ -21,17 +19,14 @@ func main() {
 	outputHandler := output.NewOutputer(output.EsOutputer, *baseConf)
 	//服务启动
 	fmt.Println("stash running!")
-	ctx, cancel := context.WithCancel(context.Background())
-	go handler.Start(ctx, inputHandler, outputHandler)
+	go handler.Start(inputHandler, outputHandler)
 	//监听
 	signs := make(chan os.Signal, 1)
 	signal.Notify(signs, syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGKILL, syscall.SIGTERM)
 	select {
 	case <-signs:
-		//todo
-		cancel()
+		fmt.Println("stash stopping!")
+		handler.Stop()
 	}
-	fmt.Println("stash stopping!")
-	time.Sleep(5 * time.Second)
 	fmt.Println("stash stop!")
 }

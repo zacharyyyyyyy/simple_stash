@@ -3,11 +3,12 @@ package input
 import (
 	"context"
 	"fmt"
-	"github.com/Shopify/sarama"
 	"simple_stash/config"
 	"simple_stash/logger"
 	"sync"
 	"time"
+
+	"github.com/Shopify/sarama"
 )
 
 type kafka struct {
@@ -91,6 +92,7 @@ func consumerGroup(ctx context.Context, cg sarama.ConsumerGroup, topic []string,
 				logger.Runtime.Error(err.Error())
 			}
 			if ctx.Err() != nil {
+				logger.Runtime.Info("kafka consumer close!")
 				return
 			}
 		}
