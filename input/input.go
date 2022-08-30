@@ -8,14 +8,16 @@ import (
 )
 
 type (
-	Input interface {
+	OperatorInput interface {
 		new(config config.ClientInput) Input
+	}
+	Input interface {
 		run(ctx context.Context, consumeFunc func(data interface{})) error
 	}
 )
 
 var (
-	inputerMap = make(map[string]Input)
+	inputerMap = make(map[string]OperatorInput)
 )
 
 func NewInputer(InputerName string, config config.Client) Input {
@@ -41,7 +43,7 @@ func Run(ctx context.Context, intputHandler Input, consumeFunc func(data interfa
 	}
 }
 
-func register(name string, inputer Input) {
+func register(name string, inputer OperatorInput) {
 	if _, ok := inputerMap[name]; !ok {
 		inputerMap[name] = inputer
 	}

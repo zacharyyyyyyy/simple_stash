@@ -7,14 +7,16 @@ import (
 )
 
 type (
-	Output interface {
+	OperatorOutput interface {
 		new(config config.ClientOutput) Output
+	}
+	Output interface {
 		run(ctx context.Context) error
 	}
 )
 
 var (
-	OutputerMap     = make(map[string]Output)
+	OutputerMap     = make(map[string]OperatorOutput)
 	OutputerHandler Output
 	//通过channel 将采集端数据传递给输出端
 	dataChan = make(chan interface{}, 200)
@@ -49,7 +51,7 @@ func read() <-chan interface{} {
 	return dataChan
 }
 
-func register(name string, outputer Output) {
+func register(name string, outputer OperatorOutput) {
 	if _, ok := OutputerMap[name]; !ok {
 		OutputerMap[name] = outputer
 	}
