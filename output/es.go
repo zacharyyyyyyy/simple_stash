@@ -2,6 +2,7 @@ package output
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"golang.org/x/sync/semaphore"
 	"log"
@@ -23,10 +24,11 @@ type elasticSearch struct {
 const EsOutputer = "es"
 
 var (
-	ElasticHandler        = &elasticSearch{}
-	goroutineLimit  int64 = 100
-	goroutineWeight int64 = 1
-	sema                  = semaphore.NewWeighted(goroutineLimit)
+	ElasticHandler              = &elasticSearch{}
+	goroutineLimit        int64 = 100
+	goroutineWeight       int64 = 1
+	sema                        = semaphore.NewWeighted(goroutineLimit)
+	goroutineNotEnoughErr       = errors.New("es goroutine not enough")
 )
 
 func init() {
@@ -66,12 +68,15 @@ func (es elasticSearch) run(ctx context.Context) error {
 				return nil
 			}
 			if len(ElasticHandler.dataSlice) >= es.bulkMaxCount {
+				if ok := sema.TryAcquire(goroutineWeight); ok != true {
+					logger.Runtime.Error(goroutineNotEnoughErr.Error())
+					continue
+				}
 				bulkData := ElasticHandler.dataSlice[:es.bulkMaxCount]
 				ElasticHandler.dataSlice = ElasticHandler.dataSlice[es.bulkMaxCount:]
-				_ = sema.Acquire(context.Background(), goroutineWeight)
 				go func(bulkData []interface{}) {
+					defer sema.Release(goroutineWeight)
 					es.bulkCreate(bulkData)
-					sema.Release(goroutineWeight)
 				}(bulkData)
 			}
 		case <-ctx.Done():
