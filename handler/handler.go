@@ -19,14 +19,14 @@ type handle struct {
 	writeFunc        func(data interface{})
 }
 
-var handler handle
+var handler *handle
 
 func init() {
 	inputCtx, inputCancelFunc := context.WithCancel(context.Background())
 	outputCtx, outputCancelFunc := context.WithCancel(context.Background())
 	inputCloseChan := make(chan struct{}, 1)
 	outputCloseChan := make(chan struct{}, 1)
-	handler = handle{
+	handler = &handle{
 		inputCtx:         inputCtx,
 		inputCancelFunc:  inputCancelFunc,
 		outputCtx:        outputCtx,
