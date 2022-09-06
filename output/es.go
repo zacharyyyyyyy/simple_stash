@@ -35,7 +35,7 @@ func init() {
 
 func (es elasticSearch) new(config config.ClientOutput) Output {
 	esConfig := config.EsConf
-	errorLog := log.New(logger.Runtime, "app", log.LstdFlags)
+	errorLog := log.New(logger.Runtime, "", log.LstdFlags)
 	client, err := elastic.NewClient(
 		elastic.SetErrorLog(errorLog),
 		elastic.SetURL(fmt.Sprintf("%s:%s", esConfig.Host, esConfig.Port)),
