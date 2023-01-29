@@ -30,21 +30,13 @@ func init() {
 func (kafka kafka) new(config config.ClientInput) Input {
 	kafkaConf := config.KafkaConf
 	kafkaHandler.topic = config.KafkaConf.Topic
-	var wg sync.WaitGroup
 	for i := 0; i < config.KafkaConf.Consumers; i++ {
-		wg.Add(1)
-		go func(k int) {
-			defer wg.Done()
-			consumer, err := newClient(config.KafkaConf.Broker[k], kafkaConf.Group, kafkaConf.MaxWaitTime)
-			if err != nil {
-				logger.Runtime.Error(err.Error())
-				return
-			}
-
-			kafkaHandler.kafkaGroup = append(kafkaHandler.kafkaGroup, consumer)
-		}(i)
+		consumer, err := newClient(config.KafkaConf.Broker[i], kafkaConf.Group, kafkaConf.MaxWaitTime)
+		if err != nil {
+			logger.Runtime.Error(err.Error())
+		}
+		kafkaHandler.kafkaGroup = append(kafkaHandler.kafkaGroup, consumer)
 	}
-	wg.Wait()
 	return kafkaHandler
 }
 func (kafka kafka) run(ctx context.Context, consumeFunc func(data interface{})) error {
@@ -81,23 +73,17 @@ func (h consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, cla
 func consumerGroup(ctx context.Context, cg sarama.ConsumerGroup, topic []string, consumeFunc func(data interface{})) {
 	var err error
 	defer cg.Close()
-	var wg sync.WaitGroup
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		handler := consumerGroupHandler{consumeFunc: consumeFunc}
-		for {
-			err = cg.Consume(ctx, topic, handler)
-			if err != nil {
-				logger.Runtime.Error(err.Error())
-			}
-			if ctx.Err() != nil {
-				logger.Runtime.Info("kafka consumer close!")
-				return
-			}
+	handler := consumerGroupHandler{consumeFunc: consumeFunc}
+	for {
+		err = cg.Consume(ctx, topic, handler)
+		if err != nil {
+			logger.Runtime.Error(err.Error())
 		}
-	}()
-	wg.Wait()
+		if ctx.Err() != nil {
+			logger.Runtime.Info("kafka consumer close!")
+			return
+		}
+	}
 }
 
 func newClient(configBase config.KafKaBroker, group string, maxWaitTime int) (sarama.ConsumerGroup, error) {
