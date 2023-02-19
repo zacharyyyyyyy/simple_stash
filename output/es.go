@@ -41,7 +41,6 @@ func (es elasticSearch) new(config config.ClientOutput) Output {
 	client, err := elastic.NewClient(
 		elastic.SetErrorLog(errorLog),
 		elastic.SetURL(fmt.Sprintf("%s:%s", esConfig.Host, esConfig.Port)),
-		// 将sniff设置为false后，便不会自动转换地址
 		elastic.SetSniff(false),
 		elastic.SetBasicAuth(esConfig.Username, esConfig.Password), // 账号密码
 	)

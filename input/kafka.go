@@ -53,18 +53,13 @@ func (kafka kafka) run(ctx context.Context, consumeFunc func(data interface{})) 
 }
 
 //kafka组消费
-// Setup 执行在 获得新 session 后 的第一步, 在 ConsumeClaim() 之前
 func (consumerGroupHandler) Setup(_ sarama.ConsumerGroupSession) error { return nil }
 
-// Cleanup 执行在 session 结束前, 当所有 ConsumeClaim goroutines 都退出时
 func (consumerGroupHandler) Cleanup(_ sarama.ConsumerGroupSession) error { return nil }
 
-// ConsumeClaim 具体的消费逻辑
 func (h consumerGroupHandler) ConsumeClaim(sess sarama.ConsumerGroupSession, claim sarama.ConsumerGroupClaim) error {
 	for msg := range claim.Messages() {
-		//消费信息
 		h.consumeFunc(string(msg.Value))
-		// 标记消息已被消费 内部会更新 consumer offset
 		sess.MarkMessage(msg, "")
 	}
 	return nil
