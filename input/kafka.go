@@ -43,6 +43,7 @@ func (kafka kafka) run(ctx context.Context, consumeFunc func(data interface{})) 
 	var wg sync.WaitGroup
 	for _, consumer := range kafkaHandler.kafkaGroup {
 		wg.Add(1)
+		consumer := consumer
 		go func() {
 			defer wg.Done()
 			consumerGroup(ctx, consumer, kafkaHandler.topic, consumeFunc)
@@ -52,7 +53,7 @@ func (kafka kafka) run(ctx context.Context, consumeFunc func(data interface{})) 
 	return nil
 }
 
-//kafka组消费
+// kafka组消费
 func (consumerGroupHandler) Setup(_ sarama.ConsumerGroupSession) error { return nil }
 
 func (consumerGroupHandler) Cleanup(_ sarama.ConsumerGroupSession) error { return nil }
