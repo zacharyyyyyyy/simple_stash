@@ -29,6 +29,7 @@ var (
 	goroutineWeight       int64 = 1
 	sema                        = semaphore.NewWeighted(goroutineLimit)
 	goroutineNotEnoughErr       = errors.New("es goroutine not enough")
+	defaultEsTicker             = 3
 )
 
 func init() {
@@ -57,6 +58,7 @@ func (es elasticSearch) new(config config.ClientOutput) Output {
 
 func (es elasticSearch) run(ctx context.Context) error {
 	defer es.client.Stop()
+	ticker := time.NewTicker(time.Duration(defaultEsTicker) * time.Second)
 	for {
 		select {
 		case data := <-read():
@@ -77,6 +79,22 @@ func (es elasticSearch) run(ctx context.Context) error {
 					defer sema.Release(goroutineWeight)
 					es.bulkCreate(bulkData)
 				}(bulkData)
+			}
+		case <-ticker.C:
+			if ok := sema.TryAcquire(goroutineWeight); ok != true {
+				logger.Runtime.Error(goroutineNotEnoughErr.Error())
+				continue
+			}
+			bulkData := ElasticHandler.dataSlice[:es.bulkMaxCount]
+			ElasticHandler.dataSlice = ElasticHandler.dataSlice[es.bulkMaxCount:]
+			go func(bulkData []interface{}) {
+				defer sema.Release(goroutineWeight)
+				es.bulkCreate(bulkData)
+			}(bulkData)
+			if ctx.Err() != nil {
+				es.bulkCreate(ElasticHandler.dataSlice)
+				logger.Runtime.Info("elasticsearch client close!")
+				return nil
 			}
 		case <-ctx.Done():
 			//清空剩余data
