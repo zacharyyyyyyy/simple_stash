@@ -85,8 +85,9 @@ func (es elasticSearch) run(ctx context.Context) error {
 				logger.Runtime.Error(goroutineNotEnoughErr.Error())
 				continue
 			}
-			bulkData := ElasticHandler.dataSlice[:es.bulkMaxCount]
-			ElasticHandler.dataSlice = ElasticHandler.dataSlice[es.bulkMaxCount:]
+			//清空dataSlice
+			bulkData := ElasticHandler.dataSlice[:]
+			ElasticHandler.dataSlice = make([]interface{}, 0, 20)
 			go func(bulkData []interface{}) {
 				defer sema.Release(goroutineWeight)
 				es.bulkCreate(bulkData)
