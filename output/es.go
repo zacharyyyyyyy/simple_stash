@@ -93,7 +93,6 @@ func (es elasticSearch) run(ctx context.Context) error {
 				es.bulkCreate(bulkData)
 			}(bulkData)
 			if ctx.Err() != nil {
-				es.bulkCreate(ElasticHandler.dataSlice)
 				logger.Runtime.Info("elasticsearch client close!")
 				return nil
 			}
